@@ -23,5 +23,5 @@ export interface Result {
 		data: Ticket | Ticket[],
 		message: string
 	},
-	success: boolean
+	success: boolean;
 }

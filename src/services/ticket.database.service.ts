@@ -33,6 +33,34 @@ export class TicketService {
     };
   }
 
+  // Método para obtener un ticket por ID, retorna un Promise<Result>
+  async fetchTicketById(env: Env, ticketId: number | string): Promise<Result> {
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
+    const { data, error } = await supabase
+      .from("tickets")
+      .select()
+      .eq("id", ticketId)
+      .single();
+
+    if (error) {
+      return {
+        result: {
+          data: [],
+          message: `Error fetching ticket by ID: ${error.message}`,
+        },
+        success: false,
+      };
+    }
+
+    return {
+      result: {
+        data: this.convertObjectKeysToCamelCase(data) as Ticket,
+        message: "Ticket fetched successfully",
+      },
+      success: true,
+    };
+  }
+
   // Método para añadir tickets, retorna un Promise<Result>
   async addTicket(env: Env, ticket: Ticket): Promise<Result> {
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
@@ -81,6 +109,61 @@ export class TicketService {
       result: {
         data: this.convertObjectKeysToCamelCase(data[0]),
         message: `Ticket with ID ${ticketId} deleted successfully`,
+      },
+      success: true,
+    };
+  }
+
+  // Método para actualizar tickets, retorna un Promise<Result>
+  async updateTicket(env: Env, ticketId: number | string, updates: Partial<Ticket>): Promise<Result> {
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
+
+    // Primero, hacemos un fetch completo del ticket para verificar el estado del campo 'paid'
+    const { data: ticketData, error: fetchError } = await supabase
+      .from("tickets")
+      .select()
+      .eq("id", ticketId)
+      .single();
+
+    if (fetchError) {
+      return {
+        result: {
+          data: [],
+          message: `Error fetching ticket: ${fetchError.message}`,
+        },
+        success: false,
+      };
+    }
+
+    // Verificamos el estado del campo 'paid'
+    if (ticketData.paid) {
+      return {
+        result: {
+          data: [],
+          message: `Ticket with ID ${ticketId} cannot be updated because the person has already entered.`,
+        },
+        success: false,
+      };
+    }
+
+    // Si el campo 'paid' es false, procedemos con la actualización
+    const { data, error: updateError } = await supabase
+      .from("tickets")
+      .update(this.toSnakeCase(updates))
+      .eq("id", ticketId)
+      .select();
+
+    if (updateError) {
+      return {
+        result: { data: this.convertObjectKeysToCamelCase(data[0]) as Ticket, message: `Error updating ticket: ${updateError.message}` },
+        success: false,
+      };
+    }
+
+    return {
+      result: {
+        data: this.convertObjectKeysToCamelCase(data[0]) as Ticket,
+        message: "Ticket updated successfully",
       },
       success: true,
     };

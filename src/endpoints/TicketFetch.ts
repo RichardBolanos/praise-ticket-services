@@ -1,81 +1,71 @@
-import { Bool, OpenAPIRoute, Str } from "chanfana";
-import { z } from "zod";
-import { Ticket } from "../types";
+import { OpenAPIRoute, OpenAPIRouteSchema, Path } from "@cloudflare/itty-router-openapi";
+import { Result, Ticket } from "../types";
+import { TicketService } from "services/ticket.database.service";
 
 export class TicketFetch extends OpenAPIRoute {
-	schema = {
-		tags: ["Tickets"],
-		summary: "Get a single Ticket by slug",
-		request: {
-			params: z.object({
-				TicketId: Str({ description: "Ticket id" }),
-			}),
-		},
-		responses: {
-			"200": {
-				description: "Returns a single Ticket if found",
-				content: {
-					"application/json": {
-						schema: z.object({
-							series: z.object({
-								success: Bool(),
-								result: z.object({
-									Ticket: Ticket,
-								}),
-							}),
-						}),
-					},
-				},
-			},
-			"404": {
-				description: "Ticket not found",
-				content: {
-					"application/json": {
-						schema: z.object({
-							series: z.object({
-								success: Bool(),
-								error: Str(),
-							}),
-						}),
-					},
-				},
-			},
-		},
-	};
+  static schema: OpenAPIRouteSchema = {
+    tags: ["Tickets"],
+    summary: "Get a single Ticket by ID",
+    parameters: {
+      ticketId: Path(String, {
+        description: "Ticket ID",
+      }),
+    },
+    responses: {
+      "200": {
+        description: "Returns a single Ticket if found",
+        schema: {
+          success: Boolean,
+          result: {
+            data: Ticket, // Cambié 'ticket' a 'data' para seguir la estructura de 'Result'
+          },
+          error: String,
+        },
+      },
+      "404": {
+        description: "Ticket not found",
+        schema: {
+          success: Boolean,
+          result: {}, // Estructura vacía para 'result'
+          error: String,
+        },
+      },
+    },
+  };
 
-	async handle(c) {
-		// Get validated data
-		const data = await this.getValidatedData<typeof this.schema>();
+  async handle(
+    request: Request,
+    env: any,
+    context: any,
+    data: Record<string, any>
+  ): Promise<any> {
+    // Retrieve the validated Ticket ID
+    // const { ticketId } = data.params;
 
-		// Retrieve the validated slug
-		const { TicketId } = data.params;
+    // const ticketService = new TicketService();
+    
+    // // Fetch the ticket by ID
+    // const ticket = await ticketService.getTicketById(env, ticketId);
 
-		// Implement your own object fetch here
+    // if (!ticket) {
+    //   return Response.json(
+    //     {
+    //       success: false,
+    //       error: "Ticket not found",
+    //       result: {},
+    //     },
+    //     { status: 404 }
+    //   );
+    // }
 
-		const exists = true;
+    // const response: Result = {
+    //   success: true,
+    //   result: {
+    //     data: ticket, // Cambié 'ticket' a 'data' para seguir la estructura de 'Result'
+    //   },
+    //   error: "",
+    // };
 
-		// @ts-ignore: check if the object exists
-		if (exists === false) {
-			return Response.json(
-				{
-					success: false,
-					error: "Object not found",
-				},
-				{
-					status: 404,
-				},
-			);
-		}
-
-		return {
-			success: true,
-			Ticket: {
-				name: "my Ticket",
-				slug: data,
-				description: "this needs to be done",
-				completed: false,
-				due_date: new Date().toISOString().slice(0, 10),
-			},
-		};
-	}
+    // return Response.json(response, { status: 200 });
+  }
 }

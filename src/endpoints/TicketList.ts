@@ -1,47 +1,46 @@
-import { Bool, Num, OpenAPIRoute } from "chanfana";
-import { z } from "zod";
+import { OpenAPIRoute, OpenAPIRouteSchema, Query } from "@cloudflare/itty-router-openapi";
 import { Result, Ticket } from "../types";
-import { Env, TicketService } from "services/ticket.database.service";
+import { TicketService } from "services/ticket.database.service";
 
 export class TicketList extends OpenAPIRoute {
-  schema = {
+  static schema: OpenAPIRouteSchema = {
     tags: ["Tickets"],
     summary: "List Tickets",
-    request: {
-      query: z.object({
-        page: Num({
-          description: "Page number",
-          default: 0,
-        }),
-        isCompleted: Bool({
-          description: "Filter by completed flag",
-          required: false,
-        }),
+    parameters: {
+      page: Query(Number, {
+        description: "Page number",
+        default: 0,
+      }),
+      isCompleted: Query(Boolean, {
+        description: "Filter by completed flag",
+        required: false,
       }),
     },
     responses: {
       "200": {
         description: "Returns a list of Tickets",
-        content: {
-          "application/json": {
-            schema: z.object({
-              series: z.object({
-                success: Bool(),
-                result: z.object({
-                  Tickets: Ticket.array(),
-                }),
-              }),
-            }),
+        schema: {
+          success: Boolean,
+          result: {
+            tickets: [Ticket], // Aseguramos que esto siga la estructura correcta
           },
         },
       },
     },
   };
 
-  async handle(c: { env: Env }): Promise<Result> {
-    const { env } = c;
-    const service: TicketService = new TicketService();
-    const result = await service.fetchTickets(env);
-    return result;
+  async handle(
+    request: Request,
+    env: any,
+    context: any,
+    data: { query: { page: number; isCompleted?: boolean } } // Definimos el tipo de datos
+  ): Promise<Result> {
+    // Retrieve the validated parameters
+    // const { page, isCompleted } = data.query;
+
+    const ticketService = new TicketService();
+
+    
+    return await ticketService.fetchTickets(env);
   }
 }

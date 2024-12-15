@@ -1,43 +1,48 @@
-import { Bool, OpenAPIRoute, Str } from "chanfana";
-import { z } from "zod";
+import {
+  OpenAPIRoute,
+  OpenAPIRouteSchema,
+  Path,
+} from "@cloudflare/itty-router-openapi";
 import { Result, Ticket } from "../types";
-import { Env, TicketService } from "services/ticket.database.service";
-
+import { TicketService } from "services/ticket.database.service";
 
 export class TicketDelete extends OpenAPIRoute {
-  schema = {
+  static schema: OpenAPIRouteSchema = {
     tags: ["Tickets"],
     summary: "Delete a Ticket",
-    request: {
-      params: z.object({
-        ticketId: Str({ description: "Ticket id" }),
+    parameters: {
+      ticketId: Path(String, {
+        description: "Ticket ID",
       }),
     },
     responses: {
       "200": {
         description: "Returns if the Ticket was deleted successfully",
-        content: {
-          "application/json": {
-            schema: z.object({
-              series: z.object({
-                success: Bool(),
-                result: z.object({
-                  Ticket: Ticket,
-                }),
-              }),
-            }),
+        schema: {
+          success: Boolean,
+          result: {
+            data: Ticket, // Cambié 'ticket' a 'data' para seguir la estructura de 'Result'
           },
         },
       },
     },
   };
 
-  async handle(c: { env: Env }): Promise<Result> {
-	const { env } = c;
-    const data = await this.getValidatedData<typeof this.schema>();
+  async handle(
+    request: Request,
+    env: any,
+    context: any,
+    data: Record<string, any>
+  ): Promise<Result> {
+    // Retrieve the validated ticket ID
     const { ticketId } = data.params;
+
     const ticketService = new TicketService();
-    const result = await ticketService.deleteTicket(env, ticketId);
-    return result;
+
+    // Implement your own object deletion here
+    const deletedTicket = await ticketService.deleteTicket(env, ticketId);
+
+    // Return the result structure
+    return deletedTicket;
   }
 }

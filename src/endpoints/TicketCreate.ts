@@ -1,50 +1,60 @@
+import {
+  OpenAPIRoute,
+  OpenAPIRouteSchema,
+} from "@cloudflare/itty-router-openapi";
 import { Result, Ticket } from "../types";
-import { Bool, OpenAPIRoute } from "chanfana";
-import { Env, TicketService } from "services/ticket.database.service";
-import { z } from "zod";
+import { TicketService } from "services/ticket.database.service";
 
 export class TicketCreate extends OpenAPIRoute {
-  schema = {
+  static schema: OpenAPIRouteSchema = {
     tags: ["Tickets"],
     summary: "Create a new Ticket",
-    request: {
-      body: {
-        content: {
-          "application/json": {
-            schema: Ticket,
-          },
-        },
-      },
-    },
+    requestBody: Ticket,
     responses: {
       "200": {
         description: "Returns the created Ticket",
-        content: {
-          "application/json": {
-            schema: z.object({
-              series: z.object({
-                success: Bool(),
-                result: z.object({
-                  Ticket: Ticket,
-                }),
-              }),
-            }),
+        schema: {
+          success: Boolean,
+          result: {
+            data: Ticket,
+            message: String,
+          },
+        },
+      },
+      "400": {
+        description: "Invalid request body",
+        schema: {
+          success: Boolean,
+          result: {
+            data: {},
+            message: String,
           },
         },
       },
     },
   };
 
-  async handle(c: { env: Env }): Promise<Result> {
-    const { env } = c;
-    const data = await this.getValidatedData<typeof this.schema>();
-    const ticketToCreate = data.body as Ticket;
+  async handle(
+    request: Request,
+    env: any,
+    context: any,
+    data: Record<string, any>
+  ): Promise<Result> {
+    // Retrieve the validated request body
+    const ticketToCreate: Ticket = data.body;
+    const ticketService = new TicketService();
 
-    const service: TicketService = new TicketService();
-    const insertedTicket = (await service.addTicket(
-      env,
-      ticketToCreate
-    ));
-    return insertedTicket;;
+    try {
+      const createdTicket = await ticketService.addTicket(env, ticketToCreate);
+      return createdTicket;
+    } catch (error) {
+      return {
+        success: false,
+        result: {
+          data: [],
+          message: error.message || "Failed to create the ticket",
+        },
+      };
+    }
   }
 }
